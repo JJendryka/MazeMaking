@@ -9,17 +9,17 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 
-class MazeRecursiveBacktracker {
+class MazePrim {
 public:
-    MazeRecursiveBacktracker(unsigned int size, unsigned short difficulty);
+    MazePrim(unsigned int size, unsigned short difficulty);
     void createMaze();
-    static std::array<short, 4> randomDirections();
+
 private:
 
     unsigned int size;
     unsigned short difficulty;
 
-    std::vector<bool> grid;
+    std::vector<short> grid;
 
     sf::RenderWindow window;
     sf::Image renderedMaze;

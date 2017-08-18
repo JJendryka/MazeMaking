@@ -3,5 +3,12 @@ project(Maze)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp BMPHelper.cpp BMPHelper.h Variables.h MazeRecursiveBacktracker.cpp MazeRecursiveBacktracker.h)
+set(SOURCE_FILES main.cpp MazeRecursiveBacktracker.cpp MazeRecursiveBacktracker.h MazePrim.cpp MazePrim.h)
 add_executable(Maze ${SOURCE_FILES})
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+find_package(SFML REQUIRED system window graphics network audio)
+if (SFML_FOUND)
+    include_directories(${SFML_INCLUDE_DIR})
+    target_link_libraries(Maze ${SFML_LIBRARIES})
+endif()

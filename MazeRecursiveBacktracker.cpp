@@ -2,12 +2,27 @@
 #include <array>
 #include <stack>
 #include <iostream>
+#include <SFML/Graphics/Image.hpp>
 #include "MazeRecursiveBacktracker.h"
-#include "BMPHelper.h"
 
-MazeRecursiveBacktracker::MazeRecursiveBacktracker() {
-    grid.resize(mazeWidth * mazeHeight);
-    std::fill(grid.begin(), grid.end(), std::bitset<5>(0));
+MazeRecursiveBacktracker::MazeRecursiveBacktracker(unsigned int size, unsigned short difficulty) : window(sf::VideoMode(800, 800), "Maze maker!!"){
+    srand(time(nullptr));
+
+    window.clear(sf::Color::Black);
+    this->size = size;
+    this->difficulty = difficulty;
+    grid.resize(size * size);
+    std::fill(grid.begin(), grid.end(), false);
+    renderedMaze.create(size*2 + 1, size*2 + 1, sf::Color::Black);
+
+    renderedMaze.setPixel(1, 0, sf::Color::Green);
+
+    texture.loadFromImage(renderedMaze);
+    rectangle.setPosition(0, 0);
+    rectangle.setSize(sf::Vector2f(800, 800));
+    rectangle.setTexture(&texture);
+    window.draw(rectangle);
+    window.display();
 }
 
 void MazeRecursiveBacktracker::createMaze() {
@@ -21,100 +36,98 @@ void MazeRecursiveBacktracker::createMaze() {
         auto top = states.top();
         states.pop();
 
-        grid[top.x + top.y * mazeWidth][4] = 1;
+        grid[top.x + top.y * size] = true;
+        renderedMaze.setPixel(top.x * 2 + 1, top.y * 2 + 1, sf::Color::Red);
 
         if(top.state < 3) states.push({top.x, top.y, top.state+1, top.order});
 
-        if(top.order[top.state] == 0 && top.x!=mazeWidth-1) {
-            if (!(grid[(top.x + 1) + top.y * mazeWidth][4])) {
+        if(top.order[top.state] == 0 && top.x!=size-1) {
+            if (!(grid[(top.x + 1) + top.y * size])) {
                 states.push({top.x + 1, top.y, 0, randomDirections()});
-                grid[top.x + top.y * mazeWidth][0] = 1;
-                grid[(top.x + 1) + top.y * mazeWidth][2] = 1;
+
+                renderedMaze.setPixel((top.x + 1) * 2, top.y * 2 + 1, sf::Color::White);
             }
         }
         if(top.order[top.state] == 1 && top.y!=0) {
-            if(!(grid[top.x + (top.y-1) * mazeWidth][4])) {
+            if(!(grid[top.x + (top.y-1) * size])) {
                 states.push({top.x, top.y-1, 0, randomDirections()});
-                grid[top.x + top.y * mazeWidth][1] = 1;
-                grid[top.x + (top.y-1) * mazeWidth][3] = 1;
+
+                renderedMaze.setPixel(top.x * 2 + 1, top.y * 2, sf::Color::White);
             }
         }
         if(top.order[top.state] == 2 && top.x!=0) {
-            if(!(grid[(top.x-1) + top.y * mazeWidth][4])) {
+            if(!(grid[(top.x-1) + top.y * size])) {
                 states.push({top.x-1, top.y, 0, randomDirections()});
-                grid[top.x + top.y * mazeWidth][2] = 1;
-                grid[(top.x-1) + top.y * mazeWidth][0] = 1;
+
+                renderedMaze.setPixel(top.x * 2, top.y * 2 + 1, sf::Color::White);
             }
         }
-        if(top.order[top.state] == 3 && top.y!=mazeHeight-1) {
-            if(!(grid[top.x + (top.y+1) * mazeWidth][4])) {
+        if(top.order[top.state] == 3 && top.y!=size-1) {
+            if(!(grid[top.x + (top.y+1) * size])) {
                 states.push({top.x, top.y+1, 0, randomDirections()});
-                grid[top.x + top.y * mazeWidth][3] = 1;
-                grid[top.x + (top.y+1) * mazeWidth][1] = 1;
+
+                renderedMaze.setPixel(top.x * 2 + 1, (top.y + 1) * 2, sf::Color::White);
             }
         }
+        if(size <= 25) {
+            texture.loadFromImage(renderedMaze);
+            window.draw(rectangle);
+            window.display();
+            bool exit = false;
+            while (true) {
+                sf::Event event;
+                window.pollEvent(event);
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Escape) exit = true;
+                    break;
+                }
+            }
+            if (exit) break;
+        }
+        renderedMaze.setPixel(top.x * 2 + 1, top.y * 2 + 1, sf::Color::White);
     }
-    grid[0][1] = 1;
-    grid[mazeWidth*mazeHeight-1][3] = 1;
-}
-
-void MazeRecursiveBacktracker::saveMaze() {
-    std::cout<<grid.size();
-
-    for (unsigned int y = 0; y < mazeWidth; y++)
-    {
-        for (unsigned int x = 0; x < mazeHeight; x++)
-        {
-            setPixel(x*4, y*4, true);
-            setPixel(x*4+3, y*4, true);
-            setPixel(x*4, y*4+3, true);
-            setPixel(x*4+3, y*4+3, true);
-            setPixel(x*4+1, y*4+1, false);
-            setPixel(x*4+2, y*4+1, false);
-            setPixel(x*4+1, y*4+2, false);
-            setPixel(x*4+2, y*4+2, false);
-
-            if(grid[x + y * mazeWidth][0]) {
-                setPixel(x*4+3, y*4+1, false);
-                setPixel(x*4+3, y*4+2, false);
+    renderedMaze.setPixel(size * 2 -1, size*2, sf::Color::Red);
+    int toCarve = size * size / 1000 * (100 - difficulty + 1);
+    for (int i=0; i<toCarve; i++) {
+        int x = (rand() % (size - 2)) + 1;
+        int y = (rand() % (size - 2)) + 1;
+        int direction = rand() % 4;
+        switch (direction) {
+            case 0:
+                if(renderedMaze.getPixel(x * 2 + 2, y * 2 + 1) == sf::Color::White) i--;
+                renderedMaze.setPixel(x * 2+ 2, y * 2 + 1, sf::Color::White);
+                break;
+            case 1:
+                if(renderedMaze.getPixel(x * 2 + 1, y * 2) == sf::Color::White) i--;
+                renderedMaze.setPixel(x * 2 + 1, y * 2, sf::Color::White);
+                break;
+            case 2:
+                if(renderedMaze.getPixel(x * 2, y * 2 + 1) == sf::Color::White) i--;
+                renderedMaze.setPixel(x * 2, y * 2 + 1, sf::Color::White);
+                break;
+            case 3:
+                if(renderedMaze.getPixel(x * 2 + 1, y * 2 + 2) == sf::Color::White) i--;
+                renderedMaze.setPixel(x * 2 + 1, y * 2 + 2, sf::Color::White);
+                break;
+        }
+        if (size <= 25) {
+            texture.loadFromImage(renderedMaze);
+            window.draw(rectangle);
+            window.display();
+            bool exit = false;
+            while (true) {
+                sf::Event event;
+                window.pollEvent(event);
+                if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Escape) exit = true;
+                    break;
+                }
             }
-            else {
-                setPixel(x*4+3, y*4+1, true);
-                setPixel(x*4+3, y*4+2, true);
-            }
-
-            if(grid[x + y * mazeWidth][1]) {
-                setPixel(x*4+1, y*4, false);
-                setPixel(x*4+2, y*4, false);
-            }
-            else {
-                setPixel(x*4+1, y*4, true);
-                setPixel(x*4+2, y*4, true);
-            }
-            if(grid[x + y * mazeWidth][2]) {
-                setPixel(x*4, y*4+1, false);
-                setPixel(x*4, y*4+2, false);
-            }
-            else {
-                setPixel(x*4, y*4+1, true);
-                setPixel(x*4, y*4+2, true);
-            }
-            if(grid[x + y * mazeWidth][3]) {
-                setPixel(x*4+1, y*4+3, false);
-                setPixel(x*4+2, y*4+3, false);
-            }
-            else {
-                setPixel(x*4+1, y*4+3, true);
-                setPixel(x*4+2, y*4+3, true);
-            }
+            if (exit) break;
         }
     }
 
-    BMPHelper::bmp_generator("./test.bmp", mazeWidth*4, mazeHeight*4, (unsigned char*)buffer);
-}
-
-void MazeRecursiveBacktracker::setPixel(unsigned int x, unsigned int y, bool color) {
-    buffer[x][y].r = buffer[x][y].g = buffer[x][y].b = color ? 0 : 255;
+    renderedMaze.saveToFile("maze.png");
 }
 
 std::array<short, 4> MazeRecursiveBacktracker::randomDirections() {
